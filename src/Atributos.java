@@ -1,4 +1,3 @@
-import gt.edu.umg.programa1.ejemploFinal.TipoDato;
 
 public class Atributos {
 	private int indice;

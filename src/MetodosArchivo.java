@@ -5,6 +5,7 @@ import java.io.RandomAccessFile;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.RecursiveAction;
@@ -12,10 +13,9 @@ import java.util.concurrent.RecursiveAction;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
+import gt.edu.umg.programa1.ejemploFinal.ArchivoDirecto;
 import gt.edu.umg.programa1.ejemploFinal.Atributo;
 import gt.edu.umg.programa1.ejemploFinal.Entidad;
-import gt.edu.umg.programa1.ejemploFinal.TipoDato;
-
 
 public class MetodosArchivo {
 
@@ -99,8 +99,7 @@ public class MetodosArchivo {
 			Entidades entidad = new Entidades();
 			entidad.setIndice(listaEntidades.size() + 1);
 			do {
-				System.out.println("Ingrese el nombre de la entidad");
-				auxNombre = sc.nextLine();
+				auxNombre = JOptionPane.showInputDialog(null,"Ingrese el nombre de la entidad");
 				longitud = auxNombre.length();
 				if (longitud < 2 || longitud > 30) {
 					JOptionPane.showMessageDialog(null,"La Cantidad de los caracteres no es correcta (3 - 30)");
@@ -118,39 +117,39 @@ public class MetodosArchivo {
 				Atributos atributo = new Atributos();
 				atributo.setIndice(entidad.getIndice());
 				longitud = 0;
-				System.out.println("Escriba el nombre del atributo no. " + (entidad.getCantidad() + 1));
+				auxNombre = JOptionPane.showInputDialog(null,"Escriba el nombre del atributo no. " + (entidad.getCantidad() + 1));
 				do {
-					auxNombre = sc.nextLine();
+					
 					longitud = auxNombre.length();
 					if (longitud < 2 || longitud > 30) {
 						JOptionPane.showMessageDialog(null,"La Cantidad de los caracteres no es correcta (3 - 30)");
 					} else {
 						if (auxNombre.contains(" ")) {
-							JOptionPane.showInternalMessageDialog(null,"El nombre no puede contener espacios, sustituya por guion bajo (underscore)");
+							JOptionPane.showMessageDialog(null,"El nombre no puede contener espacios, sustituya por guion bajo (underscore)");
 							longitud = 0;
 						}
 					}
 				} while (longitud < 2 || longitud > 30);
 				atributo.setNombre(auxNombre);
-				int valor = JOptionPane.showConfirmDialog(null,"Seleccione el tipo de dato: "
+				int valor = Integer.parseInt(JOptionPane.showInputDialog(null, "Seleccione el tipo de dato: "
 				+"\n"+TipoDato.INT.getValue() + " .......... " + TipoDato.INT.name()
 				+"\n"+TipoDato.LONG.getValue() + " .......... " + TipoDato.LONG.name()
 				+"\n"+TipoDato.STRING.getValue() + " .......... " + TipoDato.STRING.name()
 				+"\n"+TipoDato.DOUBLE.getValue() + " .......... " + TipoDato.DOUBLE.name()
 				+"\n"+TipoDato.FLOAT.getValue() + " .......... " + TipoDato.FLOAT.name()
 				+"\n"+TipoDato.DATE.getValue() + " .......... " + TipoDato.DATE.name()
-				+"\n"+TipoDato.CHAR.getValue() + " .......... " + TipoDato.CHAR.name());
+				+"\n"+TipoDato.CHAR.getValue() + " .......... " + TipoDato.CHAR.name()));
 				atributo.setValorTipoDato(valor);
 				if (atributo.isRequiereLongitud()) {
-					System.out.println("Ingrese la longitud");
-					atributo.setLongitud(sc.nextInt());
+					int lg = Integer.parseInt(JOptionPane.showInputDialog(null,"Ingrese la longitud"));
+					atributo.setLongitud(lg);
 				} else {
 					atributo.setLongitud(0);
 				}
 				atributo.setNombreTipoDato();
 				entidad.setAtributos(atributo);
-				System.out.println("Desea agregar otro atributo presione cualquier numero, de lo contrario 0");
-				bndDetener = sc.nextInt();
+				bndDetener = Integer.parseInt(JOptionPane.showInputDialog(null," Si Desea agregar otro atributo presione cualquier numero,"
+						+ " de lo contrario 0"));
 			} while (bndDetener != 0);
 			System.out.println("Los datos a registrar son: ");
 			mostrarEntidad(entidad);
@@ -207,6 +206,89 @@ public class MetodosArchivo {
 		}
 	}
 
+	private void modificarEntidad() {
+		try {
+			int indice = 0;
+			while (indice < 1 || indice > listaEntidades.size()) {
+				for (Entidades entidad : listaEntidades) {
+					System.out.println(entidad.getIndice() + " ...... " + entidad.getNombre());
+				}
+				System.out.println("Seleccione la entidad que desea modificar");
+				indice = sc.nextInt();
+				sc.nextLine();
+			}
+			Entidades entidad = new Entidades();
+			for (Entidades e : listaEntidades) {
+				if (indice == e.getIndice()) {
+					entidad = e;
+					break;
+				}
+			}
+			String nombreFichero = formarNombreFichero(entidad.getNombre());
+			archivoP = new RandomAccessFile(nombreFichero, "rw");
+			long longitudDatos = archivoP.length();
+			
+			if (longitudDatos >0) {
+				System.out.println("No es posible modificar la entidad debido a que ya tiene datos asociados");
+			} else {
+				// bandera para verificar que el registro fue encontrado
+				boolean bndEncontrado = false, bndModificado = false;
+				// posicionarse al principio del archivo
+				Entidades.seek(0);
+				long longitud = Entidades.length();
+				int registros = 0, salir = 0, i;
+				Entidades e;
+				byte[] tmpBytes;
+				archivoP.close();
+				while (longitud > totalBytes) {
+					e = new Entidades();
+					e.setIndice(Entidades.readInt());
+					tmpBytes = new byte[30];
+					Entidades.read(tmpBytes);
+					e.setBytesNombre(tmpBytes);
+					e.setCantidad(Entidades.readInt());
+					e.setBytes(Entidades.readInt());
+					e.setPosicion(Entidades.readLong());
+					if (entidad.getIndice() == e.getIndice()) {
+						System.out.println("Si no desea modificar el campo presione enter");
+						System.out.println("Ingrese el nombre");
+						String tmpStr;
+						sc.nextLine();
+						int len = 0;
+						long posicion;
+						do {
+							tmpStr = sc.nextLine();
+							len = tmpStr.length();
+							if (len == 1 || len > 30) {
+								System.out.println("La longitud del nombre no es valida [2 - 30]");
+							}
+						} while (len == 1 || len > 30);
+						if (len > 0) {
+							e.setNombre(tmpStr);
+							posicion = registros * totalBytes;
+							archivoP.seek(posicion);
+							 // moverse despues del indice (int = 4 bytes)
+							// grabar el cambio
+							archivoP.write(e.getBytesNombre());
+							bndModificado = true;
+						}
+						for (Entidades e1 : listaEntidades) {
+							System.out.println("Modificando entidad" + e);
+							System.out.println(e1.getNombre().trim());
+						}
+						
+						break;
+					}
+					registros++;
+					// restar los bytes del registro leido
+					longitud -= totalBytes;
+				}
+			}
+		} catch (Exception e) {
+			System.out.println("Error: " + e.getMessage());
+		}
+	}
+	
 	private boolean borrarArchivos() {
 		boolean res = false;
 		try {
@@ -295,6 +377,83 @@ public class MetodosArchivo {
 		}
 	}
 	
+	private void menuDefinicion(boolean mostrarAgregarRegistro) throws Exception {
+		int opcion = 1;
+		while (opcion != 0) {
+			opcion = Integer.parseInt(JOptionPane.showInputDialog(null,"Elija su opcion"
+			+"\n1 ........ Agregar entidad"
+			+"\n2 ........ Modificar entidad"
+			+"\n3 ........ Listar entidades"
+			+"\n4 ........ Agregar registros"
+			+"\n5 ........ Borrar bases de datos"
+			+"\n0 ........ Salir"));
+			switch (opcion) {
+			case 0:
+				JOptionPane.showMessageDialog(null,"Gracias por usar nuestra aplicacion");
+				break;
+			case 1:
+				if (IngresarEntidad()) {
+					JOptionPane.showMessageDialog(null,"Entidad agregada con exito");
+					mostrarAgregarRegistro = true;
+				}
+				break;
+			case 2:
+				modificarEntidad();
+				break;
+			case 3:
+				if (listaEntidades.size() > 0) {
+					int tmpInt = 0;
+					tmpInt = Integer.parseInt(JOptionPane.showInputDialog(null,"Desea imprimir los detalles?"
+							+ " Si, presione 1. No, presione 0?"));
+					if (tmpInt == 1) {
+						for (Entidades entidad : listaEntidades) {
+							mostrarEntidad(entidad);
+						}
+					} else {
+						for (Entidades entidad : listaEntidades) {
+							System.out.println("Indice: " + entidad.getIndice());
+							System.out.println("Nombre: " + entidad.getNombre());
+							System.out.println("Cantidad de atributos: " + entidad.getCantidad());
+						}
+					}
+				} else {
+					System.out.println("No hay entidades registradas");
+				}
+				break;
+			case 4:
+				int indice = 0;
+				while (indice < 1 || indice > listaEntidades.size()) {
+					for (Entidades entidad : listaEntidades) {
+						System.out.println(entidad.getIndice() + " ...... " + entidad.getNombre());
+					}
+					System.out.println("Seleccione la entidad que desea trabajar");
+					indice = sc.nextInt();
+				}
+				iniciar(indice);
+				break;
+			case 5:
+				int confirmar = 0;
+				System.out.println(
+						"Esta seguro de borrar los archivos de base de datos, presione 1 de lo contrario cualquier numero para cancelar? Esta accion no se podra reversar");
+				confirmar = sc.nextInt();
+				if (confirmar == 1) {
+					cerrarArchivo();
+					if (borrarArchivos()) {
+						listaEntidades = null;
+						listaEntidades = new ArrayList<>();
+						mostrarAgregarRegistro = false;
+						System.out.println("Archivos borrados");
+					}
+				}
+				break;
+			default:
+				System.out.println("Opcion no valida");
+				break;
+			}
+		}
+	}
+	
+	
 	public void cerrarArchivo() throws Exception {// cerramos nuestro archivo crados 
 		if (archivoP != null && Entidades != null && Atributos != null) {
 			archivoP.close();
@@ -302,6 +461,198 @@ public class MetodosArchivo {
 			Atributos.close();
 		}
 	}
+
+	private boolean grabarRegistro(Entidades entidad) {
+		boolean resultado = false;
+		try {
+			// posicionarse al final para grabar
+			archivoP.seek(archivoP.length());
+			boolean valido;
+			byte[] bytesString;
+			String tmpString = "";
+			for (Atributos atributo : entidad.getAtributos()) {
+				valido = false;
+				System.out.println("Ingrese " + atributo.getNombre().trim());
+				while (!valido) {
+					try {
+						switch (atributo.getTipoDato()) {
+						case INT:
+							int tmpInt = sc.nextInt();
+							archivoP.writeInt(tmpInt);
+							sc.nextLine();
+							break;
+						case LONG:
+							long tmpLong = sc.nextLong();
+							archivoP.writeLong(tmpLong);
+							break;
+						case STRING:
+							int longitud = 0;
+							do {
+								tmpString = sc.nextLine();
+								longitud = tmpString.length();
+								if (longitud <= 1 || longitud > atributo.getLongitud()) {
+									System.out.println("La longitud de " + atributo.getNombre().trim()
+											+ " no es valida [1 - " + atributo.getLongitud() + "]");
+								}
+							} while (longitud <= 0 || longitud > atributo.getLongitud());
+							// arreglo de bytes de longitud segun definida
+							bytesString = new byte[atributo.getLongitud()];
+							// convertir caracter por caracter a byte y agregarlo al arreglo
+							for (int i = 0; i < tmpString.length(); i++) {
+								bytesString[i] = (byte) tmpString.charAt(i);
+							}
+							archivoP.write(bytesString);
+							break;
+						case DOUBLE:
+							double tmpDouble = sc.nextDouble();
+							archivoP.writeDouble(tmpDouble);
+							break;
+						case FLOAT:
+							float tmpFloat = sc.nextFloat();
+							archivoP.writeFloat(tmpFloat);
+							break;
+						case DATE:
+							Date date = null;
+							tmpString = "";
+							while (date == null) {
+								System.out.println("Formato de fecha: " + formatoFecha);
+								tmpString = sc.nextLine();
+								date = strintToDate(tmpString);
+							}
+							bytesString = new byte[atributo.getBytes()];
+							for (int i = 0; i < tmpString.length(); i++) {
+								bytesString[i] = (byte) tmpString.charAt(i);
+							}
+							archivoP.write(bytesString);
+							break;
+						case CHAR:
+							do {
+								tmpString = sc.nextLine();
+								longitud = tmpString.length();
+								if (longitud < 1 || longitud > 1) {
+									System.out.println("Solo se permite un caracter");
+								}
+							} while (longitud < 1 || longitud > 1);
+							byte caracter = (byte) tmpString.charAt(0);
+							archivoP.writeByte(caracter);
+							break;
+						}
+						valido = true;
+					} catch (Exception e) {
+						System.out.println(
+								"Error " + e.getMessage() + " al capturar tipo de dato, vuelva a ingresar el valor: ");
+						sc.nextLine();
+					}
+				} // end while
+			} // end for
+			archivoP.write("\n".getBytes()); // cambio de linea para que el siguiente registro se agregue abajo
+			resultado = true;
+		} catch (Exception e) {
+			resultado = false;
+			System.out.println("Error al agregar el registro " + e.getMessage());
+		}
+		return resultado;
+	}
+
+	public void listarRegistros(Entidades entidad) {
+		try {
+			long longitud = archivoP.length();
+			if (longitud <= 0) {
+				System.out.println("No hay registros");
+				return; // finalizar el procedimiento
+			}
+			// posicionarse al principio del archivo
+			archivoP.seek(0);
+			byte[] tmpArrayByte;
+			String linea = "";
+			for (Atributos atributo : entidad.getAtributos()) {
+				linea += atributo.getNombre().toString().trim() + "\t\t";
+			}
+			System.out.println(linea);
+			while (longitud >= entidad.getBytes()) {
+				linea = "";
+				for (Atributos atributo : entidad.getAtributos()) {
+					switch (atributo.getTipoDato()) {
+					case INT:
+						int tmpInt = archivoP.readInt();
+						linea += String.valueOf(tmpInt) + "\t\t";
+						break;
+					case LONG:
+						long tmpLong = archivoP.readLong();
+						linea += String.valueOf(tmpLong) + "\t\t";
+						break;
+					case STRING:
+						tmpArrayByte = new byte[atributo.getLongitud()];
+						archivoP.read(tmpArrayByte);
+						String tmpString = new String(tmpArrayByte);
+						linea += tmpString.trim() + "\t\t";
+						break;
+					case DOUBLE:
+						double tmpDouble = archivoP.readDouble();
+						linea += String.valueOf(tmpDouble) + "\t\t";
+						break;
+					case FLOAT:
+						float tmpFloat = archivoP.readFloat();
+						linea += String.valueOf(tmpFloat) + "\t\t";
+						break;
+					case DATE:
+						tmpArrayByte = new byte[atributo.getBytes()];
+						archivoP.read(tmpArrayByte);
+						tmpString = new String(tmpArrayByte);
+						linea += tmpString.trim() + "\t\t";
+						break;
+					case CHAR:
+						char tmpChar = (char) archivoP.readByte();
+						linea += tmpChar + "\t\t";
+						break;
+					}
+				}
+				archivoP.readByte();// leer el cambio de linea
+				// restar los bytes del registro leido
+				longitud -= entidad.getBytes();
+				System.out.println(linea + " "+longitud);
+			}
+		} catch (Exception e) {
+			System.out.println("Error: " + e.getMessage());
+		}
+	}
+
+	public Date strintToDate(String strFecha) {
+		Date date = null;
+		try {
+			date = format.parse(strFecha);
+		} catch (Exception e) {
+			date = null;
+			System.out.println("Error en fecha: " + e.getMessage());
+		}
+		return date;
+	}
+
+	public String dateToString(Date date) {
+		String strFecha;
+		strFecha = format.format(date);
+		return strFecha;
+	}
+
+	private String formarNombreFichero(String nombre) {
+		return nombre.trim() + ".dat";
+	}
+
+	public static void main(String[] args) throws Exception {
+		MetodosArchivo ad = new MetodosArchivo();
+		if (ad.abrirArchivo()) {
+			ad.menuDefinicion(true);
+		} else {
+			ad.menuDefinicion(false);
+		}
+		System.exit(0); // finalize application
+	}
+
+	
+
+
+}
+
 //}
 //JFileChooser direccion = new JFileChooser();
 //direccion.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
